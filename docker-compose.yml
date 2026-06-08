@@ -38,8 +38,6 @@ services:
   product-service:
     build: ./product-service
     container_name: product-service
-    ports:
-      - "8080:8080"
     depends_on:
       - mongodb
       - discovery-server
@@ -50,3 +48,11 @@ services:
     container_name: discovery-server
     ports:
       - "8761:8761"
+  
+  api-gateway:
+    build: ./api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - discovery-server

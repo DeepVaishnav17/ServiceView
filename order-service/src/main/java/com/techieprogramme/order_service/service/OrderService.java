@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -27,7 +28,8 @@ public class OrderService {
 
     private final WebClient.Builder webClientBuilder;
 
-    public void placeOrder(OrderRequest orderRequest) {
+    @CircuitBreaker(name = "inventory", fallbackMethod = "fallbackMethod")
+    public String placeOrder(OrderRequest orderRequest) {
         List<OrderLineItems> orderLineItems = new ArrayList<>();
 
         for (OrderLineItemsDto dto : orderRequest.getOrderLineItemsDtos()) {
@@ -49,7 +51,6 @@ public class OrderService {
         List<String> skuCodes = order.getOrderItemsList().stream()
                 .map(OrderLineItems::getSkuCode)
                 .toList();
-
         InventoryResponse[] inventoryResponses = webClientBuilder.build().get()
                 .uri("http://inventory-service/api/inventory",
                         uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
@@ -57,10 +58,28 @@ public class OrderService {
                 .bodyToMono(InventoryResponse[].class)
                 .block();
 
-        boolean allProductInStock = Arrays.stream(inventoryResponses).allMatch(InventoryResponse::isInStock);
-        if (allProductInStock)
+        System.out.println("Length = " + inventoryResponses.length);
+
+        if (inventoryResponses == null || inventoryResponses.length == 0) {
+            return "Product not found in inventory";
+        }
+        System.out.println("Inventory Response Length: " + inventoryResponses.length);
+
+        Arrays.stream(inventoryResponses)
+                .forEach(i -> System.out.println(i.getSkuCode() + " " + i.isInStock()));
+
+        boolean allProductInStock = Arrays.stream(inventoryResponses)
+                .allMatch(InventoryResponse::isInStock);
+
+        if (allProductInStock) {
             orderRepository.save(order);
-        else
-            throw new IllegalArgumentException("Not in stock");
+            return "Order Placed Successfully";
+        } else
+            return "Product is not in stock";
+
+    }
+
+    public String fallbackMethod(OrderRequest orderRequest, Throwable throwable) {
+        return "Inventory service is unavailable. Please try again later.";
     }
 }

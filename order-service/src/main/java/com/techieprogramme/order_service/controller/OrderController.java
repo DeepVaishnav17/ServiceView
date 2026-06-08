@@ -23,8 +23,8 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public String postMethodName(@RequestBody OrderRequest OrderRequest) {
-        orderServicer.placeOrder(OrderRequest);
-        return "Order Placed Succesful";
+        return orderServicer.placeOrder(OrderRequest);
+        // return "Order Placed Succesful";
     }
 
 }
