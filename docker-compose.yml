@@ -18,8 +18,8 @@ services:
   inventory-service:
     build: ./inventory-service
     container_name: inventory-service
-    ports:
-      - "8082:8082"
+    depends_on:
+    - discovery-server
 
   order-service:
     build: ./order-service
@@ -29,6 +29,7 @@ services:
     depends_on:
       - mysql
       - inventory-service
+      - discovery-server
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/order_service
       SPRING_DATASOURCE_USERNAME: root
@@ -41,5 +42,11 @@ services:
       - "8080:8080"
     depends_on:
       - mongodb
+      - discovery-server
     environment:
       SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/product-service
+  discovery-server:
+    build: ./discovery-server
+    container_name: discovery-server
+    ports:
+      - "8761:8761"
