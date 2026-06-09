@@ -26,6 +26,7 @@
         <module>inventory-service</module>
         <module>discovery-server</module>
         <module>api-gateway</module>
+        <module>notification</module>
     </modules>
 
     <properties>
