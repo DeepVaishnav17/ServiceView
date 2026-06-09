@@ -3,7 +3,10 @@ package com.techieprogramming.auth_service.dto;
 import lombok.Data;
 
 @Data
-public class RegisterRequest {
+public class AuthRequest {
+
     private String username;
+
     private String password;
+    
 }
