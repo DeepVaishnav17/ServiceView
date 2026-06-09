@@ -27,6 +27,7 @@
         <module>discovery-server</module>
         <module>api-gateway</module>
         <module>notification</module>
+        <module>auth-service</module>
     </modules>
 
     <properties>
