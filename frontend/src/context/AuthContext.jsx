@@ -3,16 +3,13 @@ import { createContext, useContext, useMemo, useState } from "react";
 const TOKEN_KEY = "accessToken";
 const AuthContext = createContext(null);
 
-function parseJwtUsername(token) {
-    if (!token) {
-        return "";
-    }
-
+function parseJwtClaim(token, claim) {
+    if (!token) return "";
     try {
         const payload = token.split(".")[1];
         const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
         const decoded = JSON.parse(window.atob(normalized));
-        return decoded.sub || "";
+        return decoded[claim] || "";
     } catch {
         return "";
     }
@@ -33,7 +30,8 @@ export function AuthProvider({ children }) {
 
     const value = useMemo(() => ({
         token,
-        username: parseJwtUsername(token),
+        username: parseJwtClaim(token, "sub"),
+        role: parseJwtClaim(token, "role") || "USER",
         isAuthenticated: Boolean(token),
         login,
         logout,

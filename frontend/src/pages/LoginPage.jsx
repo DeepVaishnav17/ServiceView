@@ -19,6 +19,7 @@ function LoginPage() {
     const [formData, setFormData] = useState({
         username: "",
         password: "",
+        role: "USER",
     });
 
     const handleChange = (event) => {
@@ -94,6 +95,16 @@ function LoginPage() {
                         placeholder="Enter password"
                         autoComplete={mode === "login" ? "current-password" : "new-password"}
                     />
+
+                    {mode === "register" && (
+                        <>
+                            <label htmlFor="role">Role</label>
+                            <select id="role" name="role" value={formData.role} onChange={handleChange}>
+                                <option value="USER">User</option>
+                                <option value="VENDOR">Vendor</option>
+                            </select>
+                        </>
+                    )}
 
                     <button type="submit" disabled={loading}>
                         {loading ? "Please wait..." : mode === "login" ? "Login" : "Register"}

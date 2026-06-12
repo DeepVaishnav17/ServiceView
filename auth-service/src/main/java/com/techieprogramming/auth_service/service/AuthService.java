@@ -26,7 +26,11 @@ public class AuthService {
                 passwordEncoder.encode(request.getPassword())
         );
 
-        user.setRole("USER");
+        String role = request.getRole();
+        if (role == null || role.isEmpty()) {
+            role = "USER";
+        }
+        user.setRole(role);
 
         userRepository.save(user);
     }
@@ -42,7 +46,7 @@ public class AuthService {
                 user.getPassword()
         )) {
 
-            return jwtService.generateToken(user.getUsername());
+            return jwtService.generateToken(user.getUsername(), user.getRole());
         }
 
         throw new RuntimeException("Invalid Credentials");
