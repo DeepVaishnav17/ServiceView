@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.techieprogramme.order_service.dto.InventoryResponse;
+import com.techieprogramme.order_service.dto.InventoryRequest;
 import com.techieprogramme.order_service.dto.OrderLineItemsDto;
 import com.techieprogramme.order_service.dto.OrderRequest;
 import com.techieprogramme.order_service.model.Order;
@@ -21,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 
 import org.springframework.kafka.core.KafkaTemplate;
 import com.techieprogramme.order_service.event.OrderPlacedEvent;
+import com.techieprogramme.order_service.dto.OrderResponse;
 
 @Service
 @RequiredArgsConstructor
@@ -51,41 +53,51 @@ public class OrderService {
         Order order = new Order();
 
         order.setOrderNumber(UUID.randomUUID().toString());
+        order.setUsername(orderRequest.getUsername());
         order.setOrderItemsList(orderLineItems);
 
-        List<String> skuCodes = order.getOrderItemsList().stream()
-                .map(OrderLineItems::getSkuCode)
+        List<InventoryRequest> inventoryRequests = orderLineItems.stream()
+                .map(item -> new InventoryRequest(item.getSkuCode(), item.getQuantity()))
                 .toList();
-        InventoryResponse[] inventoryResponses = webClientBuilder.build().get()
-                .uri("http://inventory-service/api/inventory",
-                        uriBuilder -> uriBuilder.queryParam("skuCode", skuCodes).build())
+
+        Boolean isSuccess = webClientBuilder.build().post()
+                .uri("http://inventory-service/api/inventory/decrement")
+                .bodyValue(inventoryRequests)
                 .retrieve()
-                .bodyToMono(InventoryResponse[].class)
+                .bodyToMono(Boolean.class)
                 .block();
 
-        System.out.println("Length = " + inventoryResponses.length);
-
-        if (inventoryResponses == null || inventoryResponses.length == 0) {
-            return "Product not found in inventory";
-        }
-        System.out.println("Inventory Response Length: " + inventoryResponses.length);
-
-        Arrays.stream(inventoryResponses)
-                .forEach(i -> System.out.println(i.getSkuCode() + " " + i.isInStock()));
-
-        boolean allProductInStock = Arrays.stream(inventoryResponses)
-                .allMatch(InventoryResponse::isInStock);
-
-        if (allProductInStock) {
+        if (Boolean.TRUE.equals(isSuccess)) {
             orderRepository.save(order);
             kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
             return "Order Placed Successfully";
-        } else
+        } else {
             return "Product is not in stock";
-
+        }
     }
 
     public String fallbackMethod(OrderRequest orderRequest, Throwable throwable) {
         return "Inventory service is unavailable. Please try again later.";
+    }
+
+    public List<OrderResponse> getOrders(String username) {
+        return orderRepository.findByUsername(username).stream().map(order -> {
+            OrderResponse response = new OrderResponse();
+            response.setId(order.getId());
+            response.setOrderNumber(order.getOrderNumber());
+            response.setUsername(order.getUsername());
+            
+            List<OrderLineItemsDto> dtos = order.getOrderItemsList().stream().map(item -> {
+                OrderLineItemsDto dto = new OrderLineItemsDto();
+                dto.setId(item.getId());
+                dto.setSkuCode(item.getSkuCode());
+                dto.setPrice(item.getPrice());
+                dto.setQuantity(item.getQuantity());
+                return dto;
+            }).toList();
+            
+            response.setOrderItemsList(dtos);
+            return response;
+        }).toList();
     }
 }

@@ -11,9 +11,12 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class KafkaConsumer {
     private final NotificationStreamService notificationStreamService;
+    private final EmailService emailService;
+    
     @KafkaListener(topics = "notificationTopic")
     public void handleNotification(OrderPlacedEvent orderPlacedEvent) {
         System.out.println("Received Notification for Order - " + orderPlacedEvent.getOrderNumber());
         notificationStreamService.publishOrderPlacedNotification(orderPlacedEvent.getOrderNumber());
+        emailService.sendOrderConfirmationEmail(orderPlacedEvent.getOrderNumber());
     }
 }

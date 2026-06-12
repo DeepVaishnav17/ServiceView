@@ -27,6 +27,9 @@ public class ProductService {
         product.setName(productRequest.getName());
         product.setDescription(productRequest.getDescription());
         product.setPrice(productRequest.getPrice());
+        product.setCategory(productRequest.getCategory());
+        product.setImageUrl(productRequest.getImageUrl());
+        product.setVendorName(productRequest.getVendorName());
 
         productRepository.save(product);
 
@@ -34,8 +37,13 @@ public class ProductService {
 
     }
 
-    public List<ProductResponse> getAllProducts() {
-        List<Product> products = productRepository.findAll();
+    public List<ProductResponse> getAllProducts(String vendorName) {
+        List<Product> products;
+        if (vendorName != null && !vendorName.isEmpty()) {
+            products = productRepository.findByVendorName(vendorName);
+        } else {
+            products = productRepository.findAll();
+        }
         List<ProductResponse> productResponses = new ArrayList<>();
 
         for (Product product : products) {
@@ -45,9 +53,30 @@ public class ProductService {
             productResponse.setDescription(product.getDescription());
             productResponse.setName(product.getName());
             productResponse.setPrice(product.getPrice());
+            productResponse.setCategory(product.getCategory());
+            productResponse.setImageUrl(product.getImageUrl());
+            productResponse.setVendorName(product.getVendorName());
             productResponses.add(productResponse);
         }
 
         return productResponses;
+    }
+
+    public void updateProduct(String id, ProductRequest productRequest) {
+        Product product = productRepository.findById(id).orElseThrow(() -> new RuntimeException("Product not found"));
+        product.setSkuCode(productRequest.getSkuCode());
+        product.setName(productRequest.getName());
+        product.setDescription(productRequest.getDescription());
+        product.setPrice(productRequest.getPrice());
+        product.setCategory(productRequest.getCategory());
+        product.setImageUrl(productRequest.getImageUrl());
+        product.setVendorName(productRequest.getVendorName());
+        productRepository.save(product);
+        log.info("Product {} is updated", product.getId());
+    }
+
+    public void deleteProduct(String id) {
+        productRepository.deleteById(id);
+        log.info("Product {} is deleted", id);
     }
 }

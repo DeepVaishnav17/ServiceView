@@ -22,4 +22,7 @@ public class Product {
     private String name;
     private String description;
     private BigDecimal price;
+    private String category;
+    private String imageUrl;
+    private String vendorName;
 }

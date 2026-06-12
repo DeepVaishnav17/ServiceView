@@ -24,7 +24,11 @@ public class OrderController {
     @ResponseStatus(HttpStatus.CREATED)
     public String postMethodName(@RequestBody OrderRequest OrderRequest) {
         return orderServicer.placeOrder(OrderRequest);
-        // return "Order Placed Succesful";
     }
 
+    @org.springframework.web.bind.annotation.GetMapping
+    @ResponseStatus(HttpStatus.OK)
+    public java.util.List<com.techieprogramme.order_service.dto.OrderResponse> getOrders(@org.springframework.web.bind.annotation.RequestParam String username) {
+        return orderServicer.getOrders(username);
+    }
 }

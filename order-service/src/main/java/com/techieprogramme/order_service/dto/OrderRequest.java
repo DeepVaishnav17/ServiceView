@@ -10,5 +10,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class OrderRequest {
+    private String username;
     private List<OrderLineItemsDto> orderLineItemsDtos;
 }
