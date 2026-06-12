@@ -69,17 +69,7 @@ public class OrderService {
 
         if (Boolean.TRUE.equals(isSuccess)) {
             orderRepository.save(order);
-            // kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
-            try {
-                webClientBuilder.build().post()
-                        .uri("http://notification-service/api/notification")
-                        .bodyValue(new OrderPlacedEvent(order.getOrderNumber()))
-                        .retrieve()
-                        .bodyToMono(Void.class)
-                        .block();
-            } catch (Exception e) {
-                System.err.println("Failed to send notification via REST: " + e.getMessage());
-            }
+            kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
             return "Order Placed Successfully";
         } else {
             throw new IllegalArgumentException("Product is not in stock, please try again later");
