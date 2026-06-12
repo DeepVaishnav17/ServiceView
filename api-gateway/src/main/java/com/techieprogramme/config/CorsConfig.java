@@ -14,8 +14,13 @@ public class CorsConfig {
 
         CorsConfiguration config = new CorsConfiguration();
 
-        config.addAllowedOrigin("http://localhost:5173");
-        config.addAllowedOrigin("http://127.0.0.1:5173");
+        String frontendUrl = System.getenv("FRONTEND_URL");
+        if (frontendUrl != null && !frontendUrl.isEmpty()) {
+            config.addAllowedOrigin(frontendUrl);
+        } else {
+            config.addAllowedOrigin("http://localhost:5173");
+            config.addAllowedOrigin("http://127.0.0.1:5173");
+        }
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");
         config.addExposedHeader("*");
