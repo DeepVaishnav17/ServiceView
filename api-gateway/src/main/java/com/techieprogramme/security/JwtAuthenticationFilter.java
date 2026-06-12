@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cloud.gateway.filter.GatewayFilterChain;
 import org.springframework.cloud.gateway.filter.GlobalFilter;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.stereotype.Component;
@@ -27,9 +28,11 @@ public class JwtAuthenticationFilter
                 String path = request.getURI().getPath();
 
                 System.out.println("PATH: " + path);
-
-                // Allow auth APIs
-                if (path.startsWith("/auth")) {
+                // Allow auth APIs, SSE notifications and browser preflight
+                if (HttpMethod.OPTIONS.equals(request.getMethod())
+                                || path.startsWith("/auth")
+                                || path.startsWith("/api/notification/stream")
+                                || path.startsWith("/api/notification/recent")) {
                         return chain.filter(exchange);
                 }
 

@@ -22,6 +22,7 @@ public class ProductService {
 
     public void createProduct(ProductRequest productRequest) {
         Product product = new Product();
+        product.setSkuCode(productRequest.getSkuCode());
 
         product.setName(productRequest.getName());
         product.setDescription(productRequest.getDescription());
@@ -40,6 +41,7 @@ public class ProductService {
         for (Product product : products) {
             ProductResponse productResponse = new ProductResponse();
             productResponse.setId(product.getId());
+            productResponse.setSkuCode(product.getSkuCode());
             productResponse.setDescription(product.getDescription());
             productResponse.setName(product.getName());
             productResponse.setPrice(product.getPrice());
