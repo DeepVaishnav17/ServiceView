@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import { getAllProducts, createProduct, updateProduct, deleteProduct } from "../services/productService";
 import { placeOrder, getOrders } from "../services/orderService";
-import { addStock } from "../services/inventoryService";
+import { addStock, checkStock } from "../services/inventoryService";
 import { connectToNotificationStream, getRecentNotifications } from "../services/notificationService";
 
 function formatPrice(value) {
@@ -34,6 +34,9 @@ function HomePage() {
     const [notifications, setNotifications] = useState([]);
     const [streamState, setStreamState] = useState("connecting");
     const [searchQuery, setSearchQuery] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [selectedProduct, setSelectedProduct] = useState(null);
+    const productsPerPage = 8;
 
     // Vendor specific states
     const [vendorForm, setVendorForm] = useState({ skuCode: "", name: "", description: "", price: "", category: "", imageUrl: "", quantity: 1 });
@@ -47,10 +50,27 @@ function HomePage() {
             // Vendors only see their own catalog in Dashboard, but can see all products in Store
             const vendorFilter = currentRole === "VENDOR" && currentTab === "DASHBOARD" ? username : null;
             const response = await getAllProducts(vendorFilter);
-            setProducts(response.map((p, i) => ({
-                id: p.id || `${p.skuCode || p.name}-${i}`,
-                ...p
-            })));
+            
+            let inventoryData = [];
+            if (response.length > 0) {
+                const skuCodes = response.map(p => p.skuCode).filter(Boolean);
+                try {
+                    if (skuCodes.length > 0) {
+                        inventoryData = await checkStock(skuCodes);
+                    }
+                } catch (err) {
+                    console.error("Failed to load inventory", err);
+                }
+            }
+
+            setProducts(response.map((p, i) => {
+                const invItem = inventoryData.find(inv => inv.skuCode === p.skuCode);
+                return {
+                    id: p.id || `${p.skuCode || p.name}-${i}`,
+                    ...p,
+                    quantity: invItem ? invItem.quantity : 0
+                };
+            }));
         } catch (error) {
             toast.error(getErrorMessage(error, "Unable to fetch products."));
         } finally {
@@ -72,23 +92,37 @@ function HomePage() {
 
     useEffect(() => {
         let eventSource;
+        let isMounted = true;
         const bootstrapNotifications = async () => {
             try {
                 const recent = await getRecentNotifications();
-                setNotifications(Array.isArray(recent) ? recent : []);
+                if (isMounted) setNotifications(Array.isArray(recent) ? recent : []);
             } catch { }
 
-            eventSource = connectToNotificationStream(
-                (notif) => {
-                    setNotifications((prev) => [notif, ...prev].slice(0, 50));
-                    if (notif?.message) toast.success(notif.message);
-                },
-                (status) => setStreamState(status)
-            );
+            if (isMounted) {
+                eventSource = connectToNotificationStream(
+                    (notif) => {
+                        const isVendor = currentRole === "VENDOR";
+                        const displayMessage = isVendor ? "New Order Arrived!" : "Recent Order Activity";
+                        const customNotif = {
+                            ...notif,
+                            message: displayMessage
+                        };
+                        setNotifications((prev) => [customNotif, ...prev].slice(0, 50));
+                        if (isVendor) {
+                            toast.success("New Order Arrived!");
+                        }
+                    },
+                    (status) => { if (isMounted) setStreamState(status); }
+                );
+            }
         };
         bootstrapNotifications();
-        return () => { if (eventSource) eventSource.close(); };
-    }, []);
+        return () => { 
+            isMounted = false;
+            if (eventSource) eventSource.close(); 
+        };
+    }, [currentRole]);
 
     const handleCheckout = async () => {
         if (cart.length === 0) return toast.error("Cart is empty.");
@@ -154,6 +188,17 @@ function HomePage() {
     };
 
     const filteredProducts = products.filter(p => p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || p.category?.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    // Pagination logic
+    const indexOfLastProduct = currentPage * productsPerPage;
+    const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+    const currentProducts = filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct);
+    const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
+
+    const paginate = (pageNumber) => setCurrentPage(pageNumber);
+
+    // Reset page to 1 when search query changes
+    useEffect(() => { setCurrentPage(1); }, [searchQuery]);
 
     return (
         <main className="home-page">
@@ -239,46 +284,56 @@ function HomePage() {
                             ) : filteredProducts.length === 0 ? (
                                 <p className="empty-state">No products found.</p>
                             ) : (
-                                <div className="product-grid">
-                                    {filteredProducts.map(p => {
-                                        const isOutOfStock = p.quantity !== undefined && p.quantity <= 0;
-                                        return (
-                                        <div key={p.id} className="modern-product-card">
-                                            <div className="product-image" style={{backgroundImage: `url(${p.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'})`}}>
-                                                <span className="category-badge">{p.category || "General"}</span>
-                                                {p.quantity > 0 && p.quantity <= 5 && <span className="selling-fast-badge">Selling Fast!</span>}
+                                <>
+                                    <div className="product-grid">
+                                        {currentProducts.map(p => {
+                                            const isOutOfStock = p.quantity !== undefined && p.quantity <= 0;
+                                            return (
+                                            <div key={p.id} className="modern-product-card" onClick={() => setSelectedProduct(p)}>
+                                                <div className="product-image" style={{backgroundImage: `url(${p.imageUrl || 'https://via.placeholder.com/300x200?text=No+Image'})`}}>
+                                                    <span className="category-badge">{p.category || "General"}</span>
+                                                    {p.quantity > 0 && p.quantity <= 5 && <span className="selling-fast-badge">Selling Fast!</span>}
+                                                </div>
+                                                <div className="product-info">
+                                                    <h4>{p.name}</h4>
+                                                    <p className="vendor-name">by {p.vendorName || "Unknown"}</p>
+                                                    <p className="price">{formatPrice(p.price)}</p>
+                                                    
+                                                    {currentTab === "STORE" ? (
+                                                        <div className="action-row" onClick={(e) => e.stopPropagation()}>
+                                                            {isOutOfStock ? (
+                                                                <span className="out-of-stock-badge">Out of Stock</span>
+                                                            ) : (
+                                                                <>
+                                                                    <button className="btn-primary" onClick={() => { addToCart(p, 1); toast.success("Added to cart"); }}>
+                                                                        Add to Cart
+                                                                    </button>
+                                                                    <button className="btn-buy-now" onClick={() => { clearCart(); addToCart(p, 1); setCurrentTab("CART"); }}>
+                                                                        Buy Now
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className="action-row vendor-actions" onClick={(e) => e.stopPropagation()}>
+                                                            <button className="btn-secondary" onClick={() => editProduct(p)}>Edit</button>
+                                                            <button className="btn-danger" onClick={() => deleteProd(p.id)}>Delete</button>
+                                                            <span className="stock-info">Stock: {p.quantity || 0}</span>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             </div>
-                                            <div className="product-info">
-                                                <h4>{p.name}</h4>
-                                                <p className="vendor-name">by {p.vendorName || "Unknown"}</p>
-                                                <p className="price">{formatPrice(p.price)}</p>
-                                                
-                                                {currentTab === "STORE" ? (
-                                                    <div className="action-row">
-                                                        {isOutOfStock ? (
-                                                            <span className="out-of-stock-badge">Out of Stock</span>
-                                                        ) : (
-                                                            <>
-                                                                <button className="btn-primary" onClick={() => { addToCart(p, 1); toast.success("Added to cart"); }}>
-                                                                    Add to Cart
-                                                                </button>
-                                                                <button className="btn-buy-now" onClick={() => { clearCart(); addToCart(p, 1); setCurrentTab("CART"); }}>
-                                                                    Buy Now
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <div className="action-row vendor-actions">
-                                                        <button className="btn-secondary" onClick={() => editProduct(p)}>Edit</button>
-                                                        <button className="btn-danger" onClick={() => deleteProd(p.id)}>Delete</button>
-                                                        <span className="stock-info">Stock: {p.quantity || 0}</span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                        )})}
+                                    </div>
+                                    
+                                    {totalPages > 1 && (
+                                        <div className="pagination-controls">
+                                            <button onClick={() => paginate(currentPage - 1)} disabled={currentPage === 1}>Previous</button>
+                                            <span className="page-indicator">Page {currentPage} of {totalPages}</span>
+                                            <button onClick={() => paginate(currentPage + 1)} disabled={currentPage === totalPages}>Next</button>
                                         </div>
-                                    )})}
-                                </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     )}
@@ -362,6 +417,40 @@ function HomePage() {
                     </div>
                 </div>
             </div>
+            
+            {/* Modal Overlay */}
+            {selectedProduct && (
+                <div className="modal-overlay" onClick={() => setSelectedProduct(null)}>
+                    <div className="modal-content glass-card" onClick={e => e.stopPropagation()}>
+                        <button className="btn-close" onClick={() => setSelectedProduct(null)}>&times;</button>
+                        <div className="modal-header">
+                            <img src={selectedProduct.imageUrl || 'https://via.placeholder.com/600x400?text=No+Image'} alt={selectedProduct.name} className="modal-img" />
+                        </div>
+                        <div className="modal-body">
+                            <h2>{selectedProduct.name}</h2>
+                            <p className="vendor-name">Sold by: <strong>{selectedProduct.vendorName || "Unknown"}</strong></p>
+                            <p className="category-badge inline-badge">{selectedProduct.category || "General"}</p>
+                            <h3 className="price">{formatPrice(selectedProduct.price)}</h3>
+                            <div className="description-box">
+                                <h4>Description:</h4>
+                                <p>{selectedProduct.description || "No description provided."}</p>
+                            </div>
+                            
+                            {currentTab === "STORE" && (
+                                <div className="modal-actions">
+                                    {(selectedProduct.quantity !== undefined && selectedProduct.quantity <= 0) ? (
+                                        <span className="out-of-stock-badge">Out of Stock</span>
+                                    ) : (
+                                        <button className="btn-primary" onClick={() => { addToCart(selectedProduct, 1); toast.success("Added to cart"); setSelectedProduct(null); }}>
+                                            Add to Cart
+                                        </button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </main>
     );
 }

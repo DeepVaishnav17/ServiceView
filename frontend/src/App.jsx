@@ -7,6 +7,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import { CartProvider } from "./context/CartContext";
 
+import NotFoundPage from "./pages/NotFoundPage";
+
 function App() {
   return (
     <BrowserRouter>
@@ -18,7 +20,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<HomePage />} />
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </CartProvider>
       </AuthProvider>

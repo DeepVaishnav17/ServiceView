@@ -384,3 +384,112 @@ button:disabled {
 .btn-buy-now:hover {
     background: #059669;
 }
+
+/* Modal Styles */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 2rem;
+    border-radius: 12px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+.btn-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #6b7280;
+    cursor: pointer;
+}
+
+.btn-close:hover {
+    color: #111827;
+}
+
+.modal-img {
+    width: 100%;
+    height: auto;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+}
+
+.description-box {
+    background: #f9fafb;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+}
+
+.modal-actions {
+    margin-top: 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.inline-badge {
+    position: static;
+    display: inline-block;
+    background: #e5e7eb;
+    color: #374151;
+}
+
+/* Pagination Styles */
+.pagination-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.pagination-controls button {
+    background: #f3f4f6;
+    color: #374151;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+    background: #e5e7eb;
+}
+
+/* Not Found Page Styles */
+.not-found-page {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    background: #f3f4f6;
+}
+
+.not-found-content {
+    text-align: center;
+    padding: 3rem;
+}
+
+.not-found-content h1 {
+    font-size: 5rem;
+    color: #2563eb;
+    margin: 0;
+}

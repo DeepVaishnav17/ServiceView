@@ -72,7 +72,7 @@ public class OrderService {
             kafkaTemplate.send("notificationTopic", new OrderPlacedEvent(order.getOrderNumber()));
             return "Order Placed Successfully";
         } else {
-            return "Product is not in stock";
+            throw new IllegalArgumentException("Product is not in stock, please try again later");
         }
     }
 
