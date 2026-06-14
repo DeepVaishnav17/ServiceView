@@ -14,9 +14,8 @@ The system is designed to simulate real-world enterprise backend infrastructure 
 
 Synchronous communication between services is implemented using HTTP-based inter-service calls with RestTemplate/WebClient.
 
-```md
+
 ![Synchronous Communication](./assets/inter-process-communication.png)
-```
 
 ---
 
@@ -24,9 +23,9 @@ Synchronous communication between services is implemented using HTTP-based inter
 
 The system uses API Gateway for centralized routing and Eureka Server for service discovery.
 
-```md
+
 ![Gateway Architecture](./assets/api-gateway-architecture.png)
-```
+
 
 ---
 
@@ -34,9 +33,9 @@ The system uses API Gateway for centralized routing and Eureka Server for servic
 
 The platform integrates authentication, distributed communication, Kafka-based messaging, centralized configuration, resilience patterns, and observability tools.
 
-```md
+
 ![Complete Architecture](./assets/complete-architecture.png)
-```
+
 
 ---
 
